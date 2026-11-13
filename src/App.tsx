@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Language } from './types/compressor';
 import { SiteHeader } from './components/SiteHeader';
 import { HeroSection } from './components/HeroSection';
@@ -17,17 +17,52 @@ import { LanXFinalCTA } from './components/LanXFinalCTA';
 import { SiteFooter } from './components/SiteFooter';
 import { TrustPagesModal, ModalPage } from './components/TrustPagesModal';
 import { createSamplePhotoFile, createSampleSignatureFile } from './lib/sampleImages';
+import { AuthPage, AuthPageMode } from './pages/AuthPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { ProtectedRoute } from './auth/ProtectedRoute';
+import { navigate } from './lib/navigation';
+
+function getAuthMode(pathname: string): AuthPageMode | null {
+  if (pathname === '/login') return 'login';
+  if (pathname === '/signup') return 'signup';
+  if (pathname === '/forgot-password') return 'forgot';
+  if (pathname === '/reset-password') return 'reset';
+  return null;
+}
 
 export default function App() {
+  const [pathname, setPathname] = useState(window.location.pathname);
   const [lang, setLang] = useState<Language>('en');
   const [activeModal, setActiveModal] = useState<ModalPage | null>(null);
   const [preloadedFile, setPreloadedFile] = useState<File | null>(null);
 
-  // Sync RTL and lang attribute on documentElement
+  useEffect(() => {
+    const syncPathname = () => setPathname(window.location.pathname);
+    window.addEventListener('popstate', syncPathname);
+    return () => window.removeEventListener('popstate', syncPathname);
+  }, []);
+
   useEffect(() => {
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === 'ur' ? 'rtl' : 'ltr';
   }, [lang]);
+
+  const authMode = getAuthMode(pathname);
+  if (authMode === 'reset') {
+    return (
+      <ProtectedRoute>
+        <AuthPage mode="reset" />
+      </ProtectedRoute>
+    );
+  }
+  if (authMode) return <AuthPage mode={authMode} />;
+  if (pathname === '/dashboard') {
+    return (
+      <ProtectedRoute>
+        <DashboardPage />
+      </ProtectedRoute>
+    );
+  }
 
   const handleToggleLang = () => {
     setLang((prev) => (prev === 'en' ? 'ur' : 'en'));
@@ -35,9 +70,7 @@ export default function App() {
 
   const scrollToTool = () => {
     const el = document.getElementById('compressor-tool');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleLoadSamplePhoto = async () => {
@@ -62,28 +95,22 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#03050C] text-white flex flex-col font-sans lanx-grid selection:bg-[#2934FF] selection:text-white">
-      {/* Floating LanX Header */}
       <SiteHeader
         lang={lang}
         onToggleLang={handleToggleLang}
         onScrollToTool={scrollToTool}
         onOpenModal={(page) => setActiveModal(page)}
+        onSignIn={() => navigate('/login')}
       />
 
-      {/* Main Content Area */}
       <main className="flex-1 w-full relative">
-        {/* LanX Hero */}
         <HeroSection
           lang={lang}
           onScrollToTool={scrollToTool}
           onLoadSamplePhoto={handleLoadSamplePhoto}
           onLoadSampleSignature={handleLoadSampleSignature}
         />
-
-        {/* Continuous Marquee Ticker */}
         <LanXMarquee />
-
-        {/* Core Compression Tool (Hero Focal Point) */}
         <CompressorTool
           lang={lang}
           preloadedFile={preloadedFile}
@@ -91,49 +118,27 @@ export default function App() {
           onLoadSamplePhoto={handleLoadSamplePhoto}
           onLoadSampleSignature={handleLoadSampleSignature}
         />
-
-        {/* Trust Indicators */}
         <TrustStrip lang={lang} />
-
-        {/* LanX Bento Grid */}
         <FeatureGrid lang={lang} />
-
-        {/* LanX 6-Card Benefits */}
         <LanXBenefits />
-
-        {/* LanX Comparison Section */}
         <LanXComparison lang={lang} />
-
-        {/* Use Cases for Portals */}
         <UseCasesSection lang={lang} onScrollToTool={scrollToTool} />
-
-        {/* Format Comparison */}
         <FormatComparison lang={lang} />
-
-        {/* 3-Step Process */}
         <HowItWorks lang={lang} />
-
-        {/* LanX Quote / Mission Statement */}
         <LanXQuoteCard />
-
-        {/* FAQ Accordion */}
         <FAQAccordion lang={lang} />
-
-        {/* Final CTA Banner */}
         <LanXFinalCTA
           onScrollToTool={scrollToTool}
           onLoadSamplePhoto={handleLoadSamplePhoto}
         />
       </main>
 
-      {/* LanX Footer */}
       <SiteFooter
         lang={lang}
         onOpenModal={(page) => setActiveModal(page)}
         onScrollToTool={scrollToTool}
       />
 
-      {/* Trust & Legal Pages Modal */}
       <TrustPagesModal
         lang={lang}
         activePage={activeModal}
